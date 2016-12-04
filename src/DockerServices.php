@@ -31,7 +31,7 @@ class DockerServices extends Command
      */
     protected $services = [
         'MySQL'      => [
-            'name'    => 'mysql',
+            'repo'    => 'mysql',
             'tag'     => 'latest',
             'command' =>
                 '--name=laravel-mysql -d -v /mysql:/var/lib/mysql \\'.
@@ -42,19 +42,19 @@ class DockerServices extends Command
                 '--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci',
         ],
         'Redis'      => [
-            'name'    => 'redis',
+            'repo'    => 'redis',
             'tag'     => 'alpine',
             'command' =>
                 '-d --name=laravel-redis -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
                 'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]',
         ],
         'Beanstalkd' => [
-            'name'    => 'schickling/beanstalkd',
+            'repo'    => 'schickling/beanstalkd',
             'tag'     => 'latest',
             'command' => '-d --name=laravel-beanstalkd -p 11300:11300 schickling/beanstalkd',
         ],
         'Memcached'  => [
-            'name'    => 'memcached',
+            'repo'    => 'memcached',
             'tag'     => 'alpine',
             'command' => '-d --name=laravel-memcached  -p ENV[MEMCACHED_PORT]:ENV[MEMCACHED_PORT] memcached',
         ],
@@ -140,7 +140,8 @@ class DockerServices extends Command
                 $value = getenv($variable);
 
                 if ($value === false) {
-                    throw new Exception(sprintf("Environment variable '%s' was not found", $variable));
+                    $this->error(sprintf("Environment variable '%s' is not set", $variable));
+                    continue;
                 }
 
                 $string = preg_replace("/ENV\\[$variable\\]/su", $value, $string);
@@ -157,7 +158,7 @@ class DockerServices extends Command
      */
     private function startContainer($containerName, $service, $attribute)
     {
-        $tag = $attribute['name'].':'.$attribute['tag'];
+        $tag = $attribute['repo'].':'.$attribute['tag'];
 
         if (!$this->docker->imageExists($tag)) {
             $this->docker->pull($tag);
@@ -170,39 +171,47 @@ class DockerServices extends Command
             $this->stopContainer($containerName, $service);
         }
 
-        $instances = isset($attribute['instances']) ? (int)$attribute['instances'] : 0;
+        $instances = isset($attribute['instances']) ? (int)$attribute['instances'] : 1;
+        $containers = [];
 
-        $instance = '';
-        $name = $containerName;
+        for ($i = 1; $i <= $instances; $i++) {
+            $name = $containerName.'-'.$i;
+            $containers[] = ['service' => $service, 'name' => $name, 'instance' => $i];
+            $envVar = strtoupper($service)."$i=$name";
+            putenv($envVar);
+        }
 
-        for ($i = 0; $i <= $instances; $i++) {
-            if ($instances > 0) {
-                $name = $containerName."-$i";
-                $envVar = strtoupper($service)."$i=$containerName";
-                putenv($envVar);
-                $instance = " #$i";
-            }
-
-            $this->info('Starting '.$service.$instance, false);
-
-            $attribute['command'] = $this->parseDotEnvVars($attribute['command']);
-
-            $this->runContainer($name, $attribute);
+        foreach ($containers as $container) {
+            $this->runContainer($container, $attribute);
         }
     }
 
     /**
-     * @param $containerName
-     * @param $attribute
+     * @param array $container
+     * @param array $attributes
+     *
+     * @throws Exception
      */
-    private function runContainer($containerName, $attribute)
+    private function runContainer(array $container, array $attributes)
     {
-        $command = '--name '.$containerName." ".$attribute['command'];
+        $this->info('Starting '.$container['service'].' '.$container['instance'], false);
+
+        if (isset($attributes['command'])) {
+            $command = $attributes['command'];
+        } else {
+            if (isset($attributes['commands'])) {
+                $command = $attributes['commands'][$container['instance']];
+            } else {
+                throw new Exception("Service {$container['service']} command or commands must be set");
+            }
+        }
+
+        $command = '--name '.$container['name']." ".$this->parseDotEnvVars($command);
 
         try {
             $this->docker->run($command);
         } catch (Exception $e) {
-            $this->docker->removeNamedContainer($containerName);
+            $this->docker->removeNamedContainer($container['name']);
             $this->docker->run($command);
         }
     }
@@ -266,10 +275,10 @@ class DockerServices extends Command
     }
 
     /**
-     * @param array $service
+     * @param array $services
      */
-    protected function addService(array $service)
+    protected function addServices(array $services)
     {
-        array_merge_recursive($service, $this->services);
+        $this->services = array_merge_recursive($services, $this->services);
     }
 }

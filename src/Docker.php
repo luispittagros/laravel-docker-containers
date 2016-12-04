@@ -170,6 +170,9 @@ class Docker
         $sudo = $this->sudo ? 'sudo' : '';
 
         $process = new Process("$sudo docker $options");
+
+        $process->setTimeout(3600);
+
         $process->run(function ($type, $buffer) use ($verbose) {
             if (!$verbose) {
                 return;
