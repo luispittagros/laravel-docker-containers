@@ -107,7 +107,7 @@ class DockerServices extends Command
 
                 switch ($this->argument('option')) {
                     case "start":
-                        $this->runContainer($containerName, $service, $attributes);
+                        $this->startContainer($containerName, $service, $attributes);
                         break;
                     case 'stop':
                         return $this->stopContainer($containerName, $service);
