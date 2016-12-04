@@ -174,7 +174,7 @@ class DockerServices extends Command
 
         $instances = isset($attribute['instances']) ? (int) $attribute['instances'] : '';
 
-        for($i = 0;$i <= $instances;$i++) {
+        for($i = 0;$i < $instances;$i++) {
             if($instances > 0) {
                 $containerName .= $i;
                 $envVar = strtoupper($service)."$i=$containerName";
