@@ -165,7 +165,7 @@ class Docker
      *
      * @return string
      */
-    private function docker($options, $verbose = true)
+    public function docker($options, $verbose = true)
     {
         $sudo = $this->sudo ? 'sudo' : '';
 
