@@ -198,7 +198,7 @@ class DockerServices extends Command
         $instance = $container['instance'];
         $service = $container['service'];
 
-        putenv('INSTANCE_NAME='.$name);
+        putenv('INSTANCE_NAME='.$instance);
 
         $this->info('Starting '.$service.' '.$instance, false);
 
