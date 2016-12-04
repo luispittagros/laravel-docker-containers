@@ -7,12 +7,10 @@
             "email": "luis.gros@olx.com"
         }
     ],
-    "keywords": ["docker", "laravel", "services"],
+    "keywords": ["laravel", "docker", "services"],
     "license": "MIT",
-    "type": "project",
     "require": {
         "php": ">=5.6.4",
-        "laravel/framework": "5.3.*",
         "fabpot/goutte": "^3.2",
         "guzzlehttp/guzzle": "~6.0",
         "yadakhov/insert-on-duplicate-key": "^0.0.9",
