@@ -214,12 +214,7 @@ class DockerServices extends Command
 
         $command = '--name '.$name." ".$this->parseDotEnvVars($command);
 
-        try {
-            $this->docker->run($command);
-        } catch (Exception $e) {
-            $this->docker->removeNamedContainer($name);
-            $this->docker->run($command);
-        }
+        $this->docker->run($command);
     }
 
     /**
