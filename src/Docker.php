@@ -1,6 +1,6 @@
 <?php
 
-namespace idrislab\DockerServices;
+namespace luisgros;
 
 use Docker\DockerClient;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -9,7 +9,7 @@ use Symfony\Component\Process\Process;
 /**
  * Class Docker
  *
- * @package idrislab\DockerServices
+ * @package luisgros
  */
 class Docker
 {

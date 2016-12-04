@@ -1,6 +1,6 @@
 <?php
 
-namespace idrislab\DockerServices;
+namespace luisgros;
 
 use Illuminate\Console\Command;
 use Exception;
@@ -8,7 +8,7 @@ use Exception;
 /**
  * Class DockerServicesCommand
  *
- * @package idrislab\DockerServices
+ * @package luisgros
  */
 class DockerServicesCommand extends Command
 {
@@ -67,7 +67,7 @@ class DockerServicesCommand extends Command
     /**
      * Create a new command instance.
      *
-     * @param \idrislab\DockerServices\Docker $docker
+     * @param \luisgros\Docker $docker
      */
     public function __construct(Docker $docker)
     {
