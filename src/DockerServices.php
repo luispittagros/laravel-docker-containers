@@ -150,7 +150,6 @@ class DockerServices extends Command
         return $string;
     }
 
-
     /**
      * @param $containerName
      * @param $service
@@ -171,24 +170,24 @@ class DockerServices extends Command
             $this->stopContainer($containerName, $service);
         }
 
-        $instances = isset($attribute['instances']) ? (int) $attribute['instances'] : 0;
+        $instances = isset($attribute['instances']) ? (int)$attribute['instances'] : 0;
 
-        for($i = 0;$i <= $instances;$i++) {
+        $instance = '';
+        $name = $containerName;
 
-            var_dump($instances);
-
-            if($instances > 0) {
-                $containerName .= $i;
+        for ($i = 0; $i <= $instances; $i++) {
+            if ($instances > 0) {
+                $name = $containerName."-$i";
                 $envVar = strtoupper($service)."$i=$containerName";
                 putenv($envVar);
-                $service .= " #$i";
+                $instance = " #$i";
             }
 
-            $this->info('Starting '.$service.' '. $instances > 0 ?  $i : '', false);
+            $this->info('Starting '.$service.$instance, false);
 
             $attribute['command'] = $this->parseDotEnvVars($attribute['command']);
 
-            $this->runContainer($containerName, $attribute);
+            $this->runContainer($name, $attribute);
         }
     }
 
@@ -198,7 +197,7 @@ class DockerServices extends Command
      */
     private function runContainer($containerName, $attribute)
     {
-        $command = '--name '. $containerName . " ". $attribute['command'];
+        $command = '--name '.$containerName." ".$attribute['command'];
 
         try {
             $this->docker->run($command);
@@ -207,6 +206,7 @@ class DockerServices extends Command
             $this->docker->run($command);
         }
     }
+
     /**
      * @param $containerName
      * @param $service
