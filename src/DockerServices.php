@@ -150,12 +150,13 @@ class DockerServices extends Command
         return $string;
     }
 
+
     /**
      * @param $containerName
      * @param $service
      * @param $attribute
      */
-    private function runContainer($containerName, $service, $attribute)
+    private function startContainer($containerName, $service, $attribute)
     {
         $tag = $attribute['name'].':'.$attribute['tag'];
 
@@ -170,8 +171,32 @@ class DockerServices extends Command
             $this->stopContainer($containerName, $service);
         }
 
-        $this->info('Starting '.$service, false);
-        $command = $this->parseDotEnvVars($attribute['command']);
+
+        $instances = isset($attribute['instances']) ? (int) $attribute['instances'] : '';
+
+        for($i = 0;$i <= $instances;$i++) {
+            if($instances > 0) {
+                $containerName .= $i;
+                $envVar = strtoupper($service)."$i=$containerName";
+                putenv($envVar);
+                $service .= " #$i";
+            }
+
+            $this->info('Starting '.$service.' '. $instances > 0 ?  $i : '', false);
+
+            $attribute['command'] = $this->parseDotEnvVars($attribute['command']);
+
+            $this->runContainer($containerName, $attribute);
+        }
+    }
+
+    /**
+     * @param $containerName
+     * @param $attribute
+     */
+    private function runContainer($containerName, $attribute)
+    {
+        $command = '--name '. $containerName . " ". $attribute['command'];
 
         try {
             $this->docker->run($command);
@@ -180,7 +205,6 @@ class DockerServices extends Command
             $this->docker->run($command);
         }
     }
-
     /**
      * @param $containerName
      * @param $service
@@ -237,5 +261,13 @@ class DockerServices extends Command
 
         $headers = ['Service', ' Host', 'Port'];
         $this->table($headers, $network);
+    }
+
+    /**
+     * @param array $service
+     */
+    protected function addService(array $service)
+    {
+        array_merge_recursive($service, $this->services);
     }
 }
