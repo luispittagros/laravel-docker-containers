@@ -63,6 +63,7 @@ class DockerServices extends Command
      * @var Docker
      */
     protected $docker;
+    protected $network = [];
 
     /**
      * Create a new command instance.
@@ -101,7 +102,11 @@ class DockerServices extends Command
 
                 return $services;
             })
-            ->each(function ($attributes, $service) use (&$network) {
+            ->each(/**
+             * @param $attributes
+             * @param $service
+             */
+                function ($attributes, $service) use (&$network) {
 
                 $containerName = strtolower('laravel-'.$service);
 
@@ -118,8 +123,6 @@ class DockerServices extends Command
                     case 'info':
                         break;
                 }
-
-                $network[] = $this->getServiceContainerNetwork($service, $containerName);
             });
 
         $this->renderNetworkTable($network);
@@ -221,6 +224,8 @@ class DockerServices extends Command
         $command = '--name '.$name." ".$this->parseDotEnvVars($command);
 
         $this->docker->run($command);
+
+        $this->network[] = $this->getServiceContainerNetwork($service, $name);
 
         if (isset($attributes['docker']['post'])) {
             foreach ($attributes['docker']['post'] as $command) {
