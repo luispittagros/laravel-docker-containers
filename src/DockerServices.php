@@ -212,6 +212,12 @@ class DockerServices extends Command
             }
         }
 
+        if (isset($attributes['docker'])) {
+            foreach($attributes['docker'] as $command) {
+                $this->docker($command);
+            }
+        }
+
         $command = '--name '.$name." ".$this->parseDotEnvVars($command);
 
         $this->docker->run($command);
