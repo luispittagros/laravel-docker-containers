@@ -194,24 +194,30 @@ class DockerServices extends Command
      */
     private function runContainer(array $container, array $attributes)
     {
-        $this->info('Starting '.$container['service'].' '.$container['instance'], false);
+        $name = $container['name'];
+        $instance = $container['instance'];
+        $service = $container['service'];
+
+        putenv('CONTAINER_INSTANCE='.$instance);
+
+        $this->info('Starting '.$service.' '.$instance, false);
 
         if (isset($attributes['command'])) {
             $command = $attributes['command'];
         } else {
             if (isset($attributes['commands'])) {
-                $command = $attributes['commands'][$container['instance']];
+                $command = $attributes['commands'][$instance];
             } else {
-                throw new Exception("Service {$container['service']} command or commands must be set");
+                throw new Exception("Service {$service} command or commands must be set");
             }
         }
 
-        $command = '--name '.$container['name']." ".$this->parseDotEnvVars($command);
+        $command = '--name '.$name." ".$this->parseDotEnvVars($command);
 
         try {
             $this->docker->run($command);
         } catch (Exception $e) {
-            $this->docker->removeNamedContainer($container['name']);
+            $this->docker->removeNamedContainer($name);
             $this->docker->run($command);
         }
     }
