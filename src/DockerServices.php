@@ -214,7 +214,7 @@ class DockerServices extends Command
 
         if (isset($attributes['docker']['pre'])) {
             foreach ($attributes['docker']['pre'] as $command) {
-                $this->docker($command);
+                $this->docker->docker($command);
             }
         }
 
