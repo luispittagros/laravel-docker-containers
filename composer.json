@@ -14,7 +14,8 @@
         "fabpot/goutte": "^3.2",
         "guzzlehttp/guzzle": "~6.0",
         "yadakhov/insert-on-duplicate-key": "^0.0.9",
-        "docker-php/docker-php": "^1.24"
+        "docker-php/docker-php": "^1.24",
+        "symfony/process": "^3.2.*"
     },
     "autoload": {
         "psr-4": {

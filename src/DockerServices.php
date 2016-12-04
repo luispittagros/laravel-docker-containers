@@ -6,11 +6,11 @@ use Illuminate\Console\Command;
 use Exception;
 
 /**
- * Class DockerServicesCommand
+ * Class DockerServices
  *
  * @package luisgros
  */
-class DockerServicesCommand extends Command
+class DockerServices extends Command
 {
     /**
      * The name and signature of the console command.
@@ -25,7 +25,7 @@ class DockerServicesCommand extends Command
      */
     protected $description = 'Setup docker environment';
     /**
-     * The console command description.
+     * The services
      *
      * @var string
      */
@@ -60,14 +60,14 @@ class DockerServicesCommand extends Command
         ],
     ];
     /**
-     * @var \App\Console\Commands\Docker
+     * @var Docker
      */
     protected $docker;
 
     /**
      * Create a new command instance.
      *
-     * @param \luisgros\Docker $docker
+     * @param Docker $docker
      */
     public function __construct(Docker $docker)
     {
@@ -77,7 +77,7 @@ class DockerServicesCommand extends Command
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function handle()
     {

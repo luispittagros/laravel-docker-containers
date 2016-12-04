@@ -30,10 +30,10 @@ class Docker
     public function __construct(\Docker\Docker $docker)
     {
         $client = new DockerClient([
-            'remote_socket' => getenv('DOCKER_SOCKET') ? : 'unix:///var/run/docker.sock',
+            'remote_socket' => getenv('DOCKER_SOCKET') ?: 'unix:///var/run/docker.sock',
         ]);
 
-        $this->client= new $docker($client);
+        $this->client = new $docker($client);
     }
 
     /**
@@ -73,6 +73,7 @@ class Docker
                 return true;
             }
         }
+
         return false;
     }
 
@@ -105,17 +106,18 @@ class Docker
         $containerManager = $this->client->getContainerManager();
         $containers = $containerManager->findAll();
 
-        $ports = [];
-
         foreach ($containers as $container) {
             if ($container->getNames()[0] == "/".$name) {
                 $containerPorts = $container->getPorts();
                 foreach ($containerPorts as $port) {
                     $ports[] = $port->getPrivatePort();
                 }
+
+                return $ports;
             }
         }
-        return $ports;
+
+        return [];
     }
 
     /**
@@ -153,6 +155,7 @@ class Docker
                 return true;
             }
         }
+
         return false;
     }
 
