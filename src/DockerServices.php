@@ -171,9 +171,12 @@ class DockerServices extends Command
             $this->stopContainer($containerName, $service);
         }
 
-        $instances = isset($attribute['instances']) ? (int) $attribute['instances'] : 0;
+        $instances = isset($attribute['instances']) ? (int) $attribute['instances'] : 1;
 
-        for($i = 0;$i < $instances;$i++) {
+        for($i = 0;$i <= $instances;$i++) {
+
+            var_dump($instances);
+
             if($instances > 0) {
                 $containerName .= $i;
                 $envVar = strtoupper($service)."$i=$containerName";
