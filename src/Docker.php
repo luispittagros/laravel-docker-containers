@@ -165,11 +165,14 @@ class Docker
      *
      * @return string
      */
-    private function docker($options, $verbose = true)
+    public function docker($options, $verbose = true)
     {
         $sudo = $this->sudo ? 'sudo' : '';
 
         $process = new Process("$sudo docker $options");
+
+        $process->setTimeout(3600);
+
         $process->run(function ($type, $buffer) use ($verbose) {
             if (!$verbose) {
                 return;
