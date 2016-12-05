@@ -272,7 +272,7 @@ class DockerContainers extends Command
     }
 
     /**
-     * Get container network information
+     * Set container network information
      *
      * @return array
      */
@@ -284,7 +284,7 @@ class DockerContainers extends Command
         $port = $this->docker->getNamedContainerPorts($this->container['name']);
 
         $this->network[] = [
-            'Container' => ucfirst($this->container['service']),
+            'container' => ucfirst($this->container['service']) .' #'. $this->container['instance'],
             'host'      => $host,
             'port'      => implode(", ", $port),
         ];
@@ -300,7 +300,7 @@ class DockerContainers extends Command
             return;
         }
 
-        $headers = ['Service', ' Host', 'Port'];
+        $headers = ['Container', 'Host', 'Port'];
         $this->table($headers, $this->network);
     }
 
