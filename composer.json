@@ -7,7 +7,7 @@
             "email": "luis@idris.pt"
         }
     ],
-    "keywords": ["laravel", "docker", "services"],
+    "keywords": ["laravel", "docker", "containers", "automate"],
     "license": "MIT",
     "require": {
         "php": ">=5.6.4",
