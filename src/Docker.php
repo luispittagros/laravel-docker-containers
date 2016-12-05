@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * @author Luís Pitta Grós <luis@idris.pt>
+ */
 namespace luisgros;
 
 use Docker\DockerClient;
@@ -79,17 +81,18 @@ class Docker
 
     /**
      * @param $name
+     * @param $network
      *
      * @return string
      */
-    public function getNamedContainerIp($name)
+    public function getNamedContainerIp($name, $network)
     {
         $containerManager = $this->client->getContainerManager();
         $containers = $containerManager->findAll();
 
         foreach ($containers as $container) {
             if ($container->getNames()[0] == "/".$name) {
-                return $container->getNetworkSettings()->getNetworks()['bridge']->getIPAddress();
+                return $container->getNetworkSettings()->getNetworks()[$network]->getIPAddress();
             }
         }
 
