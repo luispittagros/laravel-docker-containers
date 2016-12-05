@@ -127,8 +127,6 @@ class DockerContainers extends Command
             })
             ->each(function ($attributes, $container) {
 
-                var_dump($container);
-
                 $this->prepare($container, $attributes);
 
                 switch ($this->argument('option')) {
