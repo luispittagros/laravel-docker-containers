@@ -107,21 +107,27 @@ class DockerContainers extends Command
         collect(explode(",", $containers))
             ->mapWithKeys(function ($container) {
                 //Retrieve only current container attributes
-                $containers = collect($this->containers)->map(function ($attributes, $current) use (&$container) {
-                    if ($this->isOptionContainer($container)) {
-                        $container = $current;
+                $containers = collect($this->containers)
+                    ->map(function ($attributes, $current) use (&$container) {
+                        if ($this->option('name') === null) {
+                            if (strtolower($current) === strtolower($container)) {
+                                $container = $current;
 
-                        return $attributes;
-                    } elseif (strtolower($current) === strtolower($container)) {
-                        $container = $current;
+                                return $attributes;
+                            }
+                        } elseif (strtolower($this->option('name')) === strtolower($current)) {
+                            $container = $current;
 
-                        return $attributes;
-                    }
-                })->only($container);
+                            return $attributes;
+                        }
+                    })
+                    ->only($container);
 
                 return $containers;
             })
             ->each(function ($attributes, $container) {
+
+                var_dump($container);
 
                 $this->prepare($container, $attributes);
 
@@ -201,6 +207,7 @@ class DockerContainers extends Command
                 if ($this->confirm("{$container['service']} is not running, do you want start?")) {
                     $this->start();
                 }
+
                 return;
             }
 
@@ -284,7 +291,7 @@ class DockerContainers extends Command
         $port = $this->docker->getNamedContainerPorts($this->container['name']);
 
         $this->network[] = [
-            'container' => ucfirst($this->container['service']) .' #'. $this->container['instance'],
+            'container' => ucfirst($this->container['service']).' #'.$this->container['instance'],
             'host'      => $host,
             'port'      => implode(", ", $port),
         ];
@@ -370,21 +377,5 @@ class DockerContainers extends Command
     private function runCommand($command)
     {
         $this->docker->run($command);
-    }
-
-    /**
-     * Check if given container name is the one chosen by user
-     *
-     * @param string $container
-     *
-     * @return bool
-     */
-    private function isOptionContainer($container)
-    {
-        if ($this->option('name') != "" && strtolower($this->option('name')) == strtolower($container)) {
-            return true;
-        }
-
-        return false;
     }
 }
