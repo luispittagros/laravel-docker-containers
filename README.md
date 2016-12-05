@@ -15,7 +15,7 @@ protected $commands = [
   ];
 ```
 
-Set the following environment variables (inside .env file for example)
+Set the following environment variables (inside your .env file)
 
 ```sh
 DOCKER_SOCKET=unix:///var/run/docker.sock
@@ -45,7 +45,7 @@ Create a new Artisan command
 php artisan make:command Containers
 ```
 
-Register the new command with Artisan in **app/Console/Kernel.php** and remove **DockerContainers::class** if registered
+Register the new command with Artisan in *app/Console/Kernel.php* and remove *DockerContainers::class* if registered
 ```php
 protected $commands = [
        Commands\Containers::class,
@@ -78,7 +78,7 @@ class Containers extends DockerContainers
 }
 ```
 
-Add your container(s) inside method **handle()**, in this case we're adding a [MySQL Group Replication Container](https://hub.docker.com/r/mysql/mysql-gr/)
+Add your container(s) inside method *handle()*, in this case we're adding a [MySQL Group Replication Container](https://hub.docker.com/r/mysql/mysql-gr/)
 ```php
       $containers = [
             'MySQLGr' => [
