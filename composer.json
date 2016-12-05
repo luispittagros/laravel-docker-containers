@@ -1,10 +1,10 @@
 {
-    "name": "idrislab/laravel-docker-services",
-    "description": "Laravel docker services",
+    "name": "idrislab/laravel-docker-containers",
+    "description": "Automate your docker containers inside laravel",
     "authors": [
         {
             "name": "Luís Pitta Grós",
-            "email": "luis.gros@olx.com"
+            "email": "luis@idris.pt"
         }
     ],
     "keywords": ["laravel", "docker", "services"],
