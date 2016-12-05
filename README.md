@@ -1,16 +1,18 @@
 # Laravel Docker Containers
 
+Automate your docker containers inside Laravel
+
 ## Installation
 ```sh
 composer require idrislab/laravel-docker-containers
 ```
 
-Register DockerContainers with Artisan in **app/Console/Kernel.php**
+Register DockerContainers with Artisan in *app/Console/Kernel.php*
 
 ```php
-    protected $commands = [
-        DockerContainers::class,
-    ];
+protected $commands = [
+    DockerContainers::class,
+  ];
 ```
 
 Set the following environment variables (inside .env file for example)
@@ -27,12 +29,12 @@ php artisan containers <start|stop|restart> [--name=]
 ```
 
 ### Examples
-Starting all containers:
+Starting all containers
 ```sh
 php artisan containers start
 ```
 
-Stopping only one container:
+Stopping only one container
 ```sh
 php artisan containers stop --name=mysql
 ```
@@ -43,14 +45,14 @@ Create a new Artisan command
 php artisan make:command Containers
 ```
 
-Register the new command with Artisan in **app/Console/Kernel.php** and remove **DockerContainers::class** if it is registered
+Register the new command with Artisan in **app/Console/Kernel.php** and remove **DockerContainers::class** if registered
 ```php
- protected $commands = [
-        Commands\Containers::class,
-    ];
+protected $commands = [
+       Commands\Containers::class,
+  ];
 ```
 
-Update your command to look like:
+Update your command to look like
 ```php
 <?php
 namespace App\Console\Commands;
@@ -78,7 +80,7 @@ class Containers extends DockerContainers
 
 Add your container(s) inside method **handle()**, in this case we're adding a [MySQL Group Replication Container](https://hub.docker.com/r/mysql/mysql-gr/)
 ```php
-      $services = [
+      $containers = [
             'MySQLGr' => [
                 'repo'      => 'mysql/mysql-gr',
                 'tag'       => 'latest',
