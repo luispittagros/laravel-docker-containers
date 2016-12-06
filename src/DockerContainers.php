@@ -36,7 +36,7 @@ class DockerContainers extends Command
             'repo'    => 'mysql',
             'tag'     => 'latest',
             'command' =>
-                '-d -v /mysql:/var/lib/mysql \\'.
+                '-d --rm -v /mysql:/var/lib/mysql \\'.
                 '-e MYSQL_USER=ENV[DB_USERNAME] \\'.
                 '-e MYSQL_PASSWORD=ENV[DB_PASSWORD] \\'.
                 '-e MYSQL_DATABASE=ENV[DB_DATABASE] \\'.
@@ -47,13 +47,13 @@ class DockerContainers extends Command
             'repo'    => 'redis',
             'tag'     => 'alpine',
             'command' =>
-                '-d -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
+                '-d --rm -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
                 'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]',
         ],
         'Beanstalkd' => [
             'repo'    => 'schickling/beanstalkd',
             'tag'     => 'latest',
-            'command' => '-d -p 11300:11300 schickling/beanstalkd',
+            'command' => '-d --rm -p 11300:11300 schickling/beanstalkd',
         ],
         'Memcached'  => [
             'repo'    => 'memcached',
