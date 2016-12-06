@@ -2,7 +2,16 @@
 
 Automate your docker containers inside Laravel
 
-## Installation
+## Setup
+
+#### Requirements
+Docker >= 1.13
+
+Laravel >= 5.3.*
+
+PHP >= 5.6.4
+
+#### Installation
 ```sh
 composer require idrislab/laravel-docker-containers
 ```
