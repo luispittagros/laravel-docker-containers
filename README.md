@@ -7,7 +7,7 @@ Automate your docker containers inside Laravel
 #### Requirements
 Docker >= 1.13
 
-Laravel > 5.3.*
+Laravel >= 5.3.*
 
 PHP >= 5.6.4
 
