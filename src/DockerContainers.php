@@ -210,7 +210,6 @@ class DockerContainers extends Command
             }
 
             $this->docker->stopNamedContainer($container['name']);
-            $this->docker->removeNamedContainer($container['name']);
         });
     }
 
