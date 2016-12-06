@@ -89,38 +89,38 @@ class Containers extends DockerContainers
 
 Add your container(s) inside method *handle()*, in this case we're adding a [MySQL Group Replication Container](https://hub.docker.com/r/mysql/mysql-gr/)
 ```php
-      $containers = [
-            'MySQLGr' => [
-                'repo'      => 'mysql/mysql-gr',
-                'tag'       => 'latest',
-                'instances' => 3,
-                'commands'   => [
-                    1 =>
-                        '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR2]:6606,ENV[MYSQLGR3]:6606\' \\'.
-                        '--server-id=ENV[INSTANCE_NAME]',
-                    2 =>
-                        '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR3]:6606\' \\'.
-                        '--server-id=ENV[INSTANCE_NAME]',
-                    3 =>
-                        '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                        'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR2]:6606\' \\'.
-                        '--server-id=ENV[INSTANCE_NAME]',
-                ],
-                'network' => 'group1',
-                'docker' => [
-                    'pre' => [
-                        'network create group1 &>/dev/null',
-                    ]
-                ]
-            ],
-        ];
+$containers = [
+    'MySQLGr' => [
+        'repo'      => 'mysql/mysql-gr',
+        'tag'       => 'latest',
+        'instances' => 3,
+        'commands'   => [
+            1 =>
+                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR2]:6606,ENV[MYSQLGR3]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_NAME]',
+            2 =>
+                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR3]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_NAME]',
+            3 =>
+                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR2]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_NAME]',
+        ],
+        'network' => 'group1',
+        'docker' => [
+            'pre' => [
+                'network create group1 &>/dev/null',
+            ]
+        ]
+    ],
+];
 
-        $this->addContainers($containers);
-        
-        parent::handle();
+$this->addContainers($containers);
+
+parent::handle();
 ```
