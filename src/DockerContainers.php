@@ -81,6 +81,11 @@ class DockerContainers extends Command
      * @var array
      */
     protected $container;
+    /**
+     * @var boolean
+     */
+    protected $verbose;
+
 
     /**
      * Create a new command instance.
@@ -233,6 +238,7 @@ class DockerContainers extends Command
     private function prepare($container, array $attributes)
     {
         $name = strtolower('laravel-'.$container);
+        $verbose = isset($attributes['verbose']) ? $attributes['verbose'] : false;
         $instances = isset($attributes['instances']) ? (int)$attributes['instances'] : 1;
         $containers = [];
 
@@ -243,7 +249,8 @@ class DockerContainers extends Command
             putenv($envVar);
         }
 
-        $this->instances = $containers;
+        $this->instances  = $containers;
+        $this->verbose    = $verbose;
         $this->attributes = $attributes;
     }
 
@@ -361,7 +368,11 @@ class DockerContainers extends Command
     {
         if (isset($attributes['docker']['post'])) {
             foreach ($attributes['docker']['post'] as $command) {
-                $this->docker->docker($this->parseEnvVars($command));
+                if(is_callable($command)) {
+                    $command();
+                } else {
+                    $this->docker->docker($this->parseEnvVars($command));
+                }
             }
         }
     }
@@ -373,6 +384,6 @@ class DockerContainers extends Command
      */
     private function runCommand($command)
     {
-        $this->docker->run($command);
+        $this->docker->run($command, $this->verbose);
     }
 }
