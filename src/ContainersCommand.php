@@ -45,6 +45,8 @@ class ContainersCommand extends Command
     public function __construct(Containers $dockerContainers)
     {
         $this->dockerContainers = $dockerContainers;
+
+        parent::__construct();
     }
 
     /**

@@ -314,4 +314,12 @@ class Containers
     {
         return $this->network;
     }
+
+    /**
+     * @param array $containers
+     */
+    public function loadContainers(array $containers)
+    {
+        $this->containers = array_merge($containers, $this->containers);
+    }
 }
