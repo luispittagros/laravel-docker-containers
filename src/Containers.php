@@ -2,69 +2,18 @@
 /**
  * @author Luís Pitta Grós <luis@idris.pt>
  */
-namespace luisgros;
+namespace luisgros\docker;
 
-use Illuminate\Console\Command;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 /**
- * Class DockerContainers
+ * Class Containers
  *
- * @package luisgros
+ * @package luisgros\docker
  */
-class DockerContainers extends Command
+class Containers
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'containers {option} {--name=}';
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Automate your docker containers';
-    /**
-     * The services
-     *
-     * @var string
-     */
-    protected $containers = [
-        'MySQL'      => [
-            'repo'    => 'mysql',
-            'tag'     => 'latest',
-            'command' =>
-                '-d --rm -v /mysql:/var/lib/mysql \\'.
-                '-e MYSQL_USER=ENV[DB_USERNAME] \\'.
-                '-e MYSQL_PASSWORD=ENV[DB_PASSWORD] \\'.
-                '-e MYSQL_DATABASE=ENV[DB_DATABASE] \\'.
-                '-e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] mysql \\'.
-                '--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci',
-        ],
-        'Redis'      => [
-            'repo'    => 'redis',
-            'tag'     => 'alpine',
-            'command' =>
-                '-d --rm -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
-                'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]',
-        ],
-        'Beanstalkd' => [
-            'repo'    => 'schickling/beanstalkd',
-            'tag'     => 'latest',
-            'command' => '-d --rm -p 11300:11300 schickling/beanstalkd',
-        ],
-        'Memcached'  => [
-            'repo'    => 'memcached',
-            'tag'     => 'alpine',
-            'command' => '-d -p ENV[MEMCACHED_PORT]:ENV[MEMCACHED_PORT] memcached',
-        ],
-    ];
-    /**
-     * @var Docker
-     */
-    protected $docker;
     /**
      * @var array
      */
@@ -72,7 +21,19 @@ class DockerContainers extends Command
     /**
      * @var array
      */
-    protected $network = [];
+    protected $containers;
+    /**
+     * @var array
+     */
+    protected $container;
+    /**
+     * @var Docker
+     */
+    protected $docker;
+    /**
+     * @var string $host
+     */
+    protected $host;
     /**
      * @var array
      */
@@ -80,36 +41,26 @@ class DockerContainers extends Command
     /**
      * @var array
      */
-    protected $container;
+    public $network = [];
     /**
      * @var boolean
      */
     protected $verbose;
 
-
     /**
-     * Create a new command instance.
-     *
      * @param Docker $docker
      */
     public function __construct(Docker $docker)
     {
         $this->docker = $docker;
-        parent::__construct();
     }
 
     /**
-     * @throws Exception
+     * @param array $containers
      */
-    public function handle()
+    public function init(array $containers)
     {
-        $containers = getenv('DOCKER_CONTAINERS');
-
-        if (!$containers) {
-            throw new Exception("Environment variable DOCKER_CONTAINERS is not set");
-        }
-
-        collect(explode(",", $containers))
+        collect($this->containers)
             ->mapWithKeys(function ($container) {
                 //Retrieve only current container attributes
                 $containers = collect($this->containers)
@@ -152,19 +103,9 @@ class DockerContainers extends Command
     }
 
     /**
-     * Add containers
-     *
-     * @param array $containers
-     */
-    protected function addContainers(array $containers)
-    {
-        $this->containers = array_merge_recursive($containers, $this->containers);
-    }
-
-    /**
      * Start docker container
      */
-    private function start()
+    public function start()
     {
         $this->pullImage();
 
@@ -193,15 +134,14 @@ class DockerContainers extends Command
 
         $this->preCommand();
         $this->runCommand($this->getContainerCommand());
-        $this->postCommand();
-
         $this->setContainerNetwork();
+        $this->postCommand();
     }
 
     /**
      * Stop docker container
      */
-    private function stop()
+    public function stop()
     {
         collect($this->instances)->each(function ($container) {
             $this->info("Stopping {$container['service']} #{$container['instance']}");
@@ -214,14 +154,19 @@ class DockerContainers extends Command
                 return;
             }
 
-            $this->docker->stopNamedContainer($container['name']);
+            try {
+                $this->docker->stopNamedContainer($container['name']);
+                $this->docker->removeNamedContainer($container['name']);
+            } catch (Exception $e) {
+                Log::warning($e->getMessage());
+            }
         });
     }
 
     /**
      * Restart docker containers
      */
-    private function restart()
+    public function restart()
     {
         $this->stop();
         $this->start();
@@ -235,7 +180,7 @@ class DockerContainers extends Command
      *
      * @return array
      */
-    private function prepare($container, array $attributes)
+    public function prepare($containers, $container = null)
     {
         $name = strtolower('laravel-'.$container);
         $verbose = isset($attributes['verbose']) ? $attributes['verbose'] : false;
@@ -249,8 +194,8 @@ class DockerContainers extends Command
             putenv($envVar);
         }
 
-        $this->instances  = $containers;
-        $this->verbose    = $verbose;
+        $this->instances = $containers;
+        $this->verbose = $verbose;
         $this->attributes = $attributes;
     }
 
@@ -294,25 +239,13 @@ class DockerContainers extends Command
         $host = $this->docker->getNamedContainerIp($this->container['name'], $network);
         $port = $this->docker->getNamedContainerPorts($this->container['name']);
 
+        $this->host = $host;
+
         $this->network[] = [
             'container' => ucfirst($this->container['service']).' #'.$this->container['instance'],
             'host'      => $host,
             'port'      => implode(", ", $port),
         ];
-    }
-
-    /**
-     * Render a console table displaying network information
-     * for each docker container running
-     */
-    private function renderNetworkTable()
-    {
-        if (empty($this->network)) {
-            return;
-        }
-
-        $headers = ['Container', 'Host', 'Port'];
-        $this->table($headers, $this->network);
     }
 
     /**
@@ -336,13 +269,13 @@ class DockerContainers extends Command
     {
         $attributes = $this->attributes;
 
-        if (isset($attributes['command'])) {
-            $command = $attributes['command'];
+        if (isset($attributes['run-command'])) {
+            $command = $attributes['run-command'];
         } else {
-            if (isset($attributes['commands'])) {
-                $command = $attributes['commands'][$this->container['instance']];
+            if (isset($attributes['run-commands'])) {
+                $command = $attributes['run-commands'][$this->container['instance']];
             } else {
-                throw new Exception("Container {$this->container['service']} command or commands must be set");
+                throw new Exception("Container {$this->container['service']} run command or commands must be set");
             }
         }
 
@@ -354,9 +287,13 @@ class DockerContainers extends Command
      */
     private function preCommand()
     {
-        if (isset($attributes['docker']['pre'])) {
-            foreach ($attributes['docker']['pre'] as $command) {
-                $this->docker->docker($this->parseEnvVars($command));
+        if (isset($this->attributes['pre-command'])) {
+            foreach ($this->attributes['pre-command'] as $command) {
+                if (is_callable($command)) {
+                    $command();
+                } else {
+                    $this->docker->docker($this->parseEnvVars($command));
+                }
             }
         }
     }
@@ -366,9 +303,9 @@ class DockerContainers extends Command
      */
     private function postCommand()
     {
-        if (isset($attributes['docker']['post'])) {
-            foreach ($attributes['docker']['post'] as $command) {
-                if(is_callable($command)) {
+        if (isset($this->attributes['post-command'])) {
+            foreach ($this->attributes['post-command'] as $command) {
+                if (is_callable($command)) {
                     $command();
                 } else {
                     $this->docker->docker($this->parseEnvVars($command));
@@ -385,5 +322,13 @@ class DockerContainers extends Command
     private function runCommand($command)
     {
         $this->docker->run($command, $this->verbose);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getCurrentHost()
+    {
+        return $this->host;
     }
 }

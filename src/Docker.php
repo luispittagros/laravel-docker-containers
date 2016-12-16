@@ -2,7 +2,7 @@
 /**
  * @author Luís Pitta Grós <luis@idris.pt>
  */
-namespace luisgros;
+namespace luisgros\docker;
 
 use Docker\DockerClient;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -11,7 +11,7 @@ use Symfony\Component\Process\Process;
 /**
  * Class Docker
  *
- * @package luisgros
+ * @package luisgros\docker
  */
 class Docker
 {
