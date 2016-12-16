@@ -1,6 +1,6 @@
 {
     "name": "idrislab/laravel-docker-containers",
-    "description": "Automate your docker containers inside laravel",
+    "description": "Automate your docker containers with artisan",
     "authors": [
         {
             "name": "Luís Pitta Grós",
@@ -17,7 +17,7 @@
     },
     "autoload": {
         "psr-4": {
-            "luisgros\\": "src/"
+            "luisgros\\docker\\": "src/"
         }
     }
 }

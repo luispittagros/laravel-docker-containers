@@ -50,4 +50,36 @@ abstract class Container
     public function pre_command()
     {
     }
+
+    /**
+     * @param string $host
+     * @param int    $retry
+     * @param int    $sleep
+     *
+     * @return string
+     */
+    protected function ping($host, $retry = 900, $sleep = 1)
+    {
+        $connected = false;
+        $retries = 0;
+
+        $contextOptions = [
+            "ssl" => [
+                "verify_peer"      => false,
+                "verify_peer_name" => false,
+            ],
+        ];
+
+        while (!$connected && $retry > $retries) {
+            try {
+                if (file_get_contents($host, false, stream_context_create($contextOptions))) {
+                    $connected = true;
+                }
+            } catch (Exception $e) {
+                print('.');
+                $retries++;
+                sleep($sleep);
+            }
+        }
+    }
 }

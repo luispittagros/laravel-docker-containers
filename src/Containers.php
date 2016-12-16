@@ -17,10 +17,6 @@ class Containers
     /**
      * @var array
      */
-    protected $attributes;
-    /**
-     * @var array
-     */
     protected $containers;
     /**
      * @var array
@@ -31,21 +27,9 @@ class Containers
      */
     protected $docker;
     /**
-     * @var string $host
-     */
-    protected $host;
-    /**
      * @var array
      */
-    protected $instances;
-    /**
-     * @var array
-     */
-    public $network = [];
-    /**
-     * @var boolean
-     */
-    protected $verbose;
+    protected $network = [];
 
     /**
      * @param Docker $docker
@@ -56,9 +40,10 @@ class Containers
     }
 
     /**
-     * @param array $containers
+     * @param string $command
+     * @param null   $container
      */
-    public function init(array $containers)
+    public function init($command, $container = null)
     {
         collect($this->containers)
             ->mapWithKeys(function ($container) {
@@ -98,8 +83,6 @@ class Containers
                     default:
                 }
             });
-
-        $this->renderNetworkTable();
     }
 
     /**
@@ -180,7 +163,7 @@ class Containers
      *
      * @return array
      */
-    public function prepare($containers, $container = null)
+    public function prepare($container, array $attributes)
     {
         $name = strtolower('laravel-'.$container);
         $verbose = isset($attributes['verbose']) ? $attributes['verbose'] : false;
@@ -325,10 +308,10 @@ class Containers
     }
 
     /**
-     * @return string
+     * @return array
      */
-    protected function getCurrentHost()
+    public function getNetworkInformation()
     {
-        return $this->host;
+        return $this->network;
     }
 }

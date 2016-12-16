@@ -32,6 +32,10 @@ class ContainersCommand extends Command
      * @var array
      */
     protected $containers = [];
+    /**
+     * @var \luisgros\docker\Containers
+     */
+    protected $dockerContainers;
 
     /**
      * ContainersCommand constructor.
@@ -48,44 +52,11 @@ class ContainersCommand extends Command
      */
     public function handle()
     {
-        collect($this->containers)
-            ->mapWithKeys(function ($container) {
-                //Retrieve only current container attributes
-                $containers = collect($this->containers)
-                    ->map(function ($attributes, $current) use (&$container) {
-                        if ($this->option('name') === null) {
-                            if (strtolower($current) === strtolower($container)) {
-                                $container = $current;
+        $container = $this->option('name') ? : null;
+        $command   = $this->argument('option');
 
-                                return $attributes;
-                            }
-                        } elseif (strtolower($this->option('name')) === strtolower($current)) {
-                            $container = $current;
-
-                            return $attributes;
-                        }
-                    })
-                    ->only($container);
-
-                return $containers;
-            })
-            ->each(function ($attributes, $container) {
-
-                $this->prepare($container, $attributes);
-
-                switch ($this->argument('option')) {
-                    case "start":
-                        $this->start();
-                        break;
-                    case 'stop':
-                        return $this->stop();
-                        break;
-                    case 'restart':
-                        $this->restart();
-                        break;
-                    default:
-                }
-            });
+        $this->dockerContainers->loadContainers($this->containers);
+        $this->dockerContainers->init($command, $container);
 
         $this->displayNetworkInformation();
     }
@@ -96,43 +67,13 @@ class ContainersCommand extends Command
      */
     private function displayNetworkInformation()
     {
-        if (empty($this->dockerContainers->network)) {
+        $network = $this->dockerContainers->getNetworkInformation();
+
+        if (empty($network)) {
             return;
         }
 
         $headers = ['Container', 'Host', 'Port'];
-        $this->table($headers, $this->dockerContainers->network);
-    }
-
-    /**
-     * @param string $host
-     * @param int    $retry
-     * @param int    $sleep
-     *
-     * @return string
-     */
-    public function ping($host, $retry = 900, $sleep = 1)
-    {
-        $connected = false;
-        $retries = 0;
-
-        $contextOptions = [
-            "ssl" => [
-                "verify_peer"      => false,
-                "verify_peer_name" => false,
-            ],
-        ];
-
-        while (!$connected && $retry > $retries) {
-            try {
-                if (file_get_contents($host, false, stream_context_create($contextOptions))) {
-                    $connected = true;
-                }
-            } catch (Exception $e) {
-                print('.');
-                $retries++;
-                sleep($sleep);
-            }
-        }
+        $this->table($headers, $network);
     }
 }
