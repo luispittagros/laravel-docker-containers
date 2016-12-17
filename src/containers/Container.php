@@ -9,45 +9,49 @@ abstract class Container
     /**
      * @var string
      */
-    protected $repo;
+    public $repo;
     /**
      * @var string
      */
-    protected $tag;
+    public $tag;
+    /**
+     * @var string
+     */
+    public $network = 'bridge';
     /**
      * @var int
      */
-    protected $instances;
+    public $instances = 1;
     /**
      * @var boolean
      */
-    protected $verbose;
+    public $verbose = false;
 
     /**
      * @return string
      */
-    public function run_command()
+    public function runCommand()
     {
     }
 
     /**
      * @return array
      */
-    public function run_commands()
+    public function runCommands()
     {
     }
 
     /**
      * @return array
      */
-    public function post_command()
+    public function postCommand()
     {
     }
 
     /**
      * @return array
      */
-    public function pre_command()
+    public function preCommand()
     {
     }
 

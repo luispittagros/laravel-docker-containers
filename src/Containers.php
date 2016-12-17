@@ -6,6 +6,7 @@ namespace luisgros\docker;
 
 use Exception;
 use Illuminate\Support\Facades\Log;
+use luisgros\docker\containers\Container;
 
 /**
  * Class Containers
@@ -17,7 +18,7 @@ class Containers
     /**
      * @var array
      */
-    protected $containers;
+    protected $containers = [];
     /**
      * @var array
      */
@@ -30,6 +31,14 @@ class Containers
      * @var array
      */
     protected $network = [];
+    /**
+     * @var array
+     */
+    private $instances = [];
+    /**
+     * @var array
+     */
+    private $instance = [];
 
     /**
      * @param Docker $docker
@@ -40,38 +49,28 @@ class Containers
     }
 
     /**
-     * @param string $command
-     * @param null   $container
+     * @param string      $command
+     * @param string|null $name
      */
-    public function init($command, $container = null)
+    public function init($command, $name = null)
     {
         collect($this->containers)
-            ->mapWithKeys(function ($container) {
-                //Retrieve only current container attributes
-                $containers = collect($this->containers)
-                    ->map(function ($attributes, $current) use (&$container) {
-                        if ($this->option('name') === null) {
-                            if (strtolower($current) === strtolower($container)) {
-                                $container = $current;
+            ->reject(function ($current) use ($name) {
+                if ($name === null) {
+                    return false;
+                }
 
-                                return $attributes;
-                            }
-                        } elseif (strtolower($this->option('name')) === strtolower($current)) {
-                            $container = $current;
+                if (strtolower(class_basename($current)) === strtolower($name)) {
+                    return false;
+                }
 
-                            return $attributes;
-                        }
-                    })
-                    ->only($container);
+                return true;
+            })->each(function ($container) use ($command) {
 
-                return $containers;
-            })
-            ->each(function ($attributes, $container) {
+                $this->prepare(new $container());
 
-                $this->prepare($container, $attributes);
-
-                switch ($this->argument('option')) {
-                    case "start":
+                switch ($command) {
+                    case 'start':
                         $this->start();
                         break;
                     case 'stop':
@@ -81,6 +80,7 @@ class Containers
                         $this->restart();
                         break;
                     default:
+                        throw new Exception('Container init method command not found or not defined');
                 }
             });
     }
@@ -92,11 +92,11 @@ class Containers
     {
         $this->pullImage();
 
-        foreach ($this->instances as $container) {
-            $this->container = $container;
+        foreach ($this->instances as $instance) {
+            $this->instance = $instance;
 
-            if ($this->docker->isNamedContainerRunning($container['name'])) {
-                if ($this->confirm("{$container['name']} is already running, do you want restart?")) {
+            if ($this->docker->isNamedContainerRunning($instance['container'])) {
+                if ($this->confirm("{$instance['container']} is already running, do you want restart?")) {
                     $this->restart();
                 }
                 continue;
@@ -107,47 +107,33 @@ class Containers
     }
 
     /**
-     * Run docker container
-     */
-    private function runContainer()
-    {
-        putenv('CURRENT_INSTANCE='.$this->container['instance']);
-
-        $this->info("Starting {$this->container['service']} #{$this->container['instance']}", false);
-
-        $this->preCommand();
-        $this->runCommand($this->getContainerCommand());
-        $this->setContainerNetwork();
-        $this->postCommand();
-    }
-
-    /**
      * Stop docker container
      */
     public function stop()
     {
-        collect($this->instances)->each(function ($container) {
-            $this->info("Stopping {$container['service']} #{$container['instance']}");
+        collect($this->instances)
+            ->each(function ($instance) {
+                $this->info("Stopping {$instance['service']} #{$instance['instance']}");
 
-            if (!$this->docker->isNamedContainerRunning($container['name'])) {
-                if ($this->confirm("{$container['service']} is not running, do you want start?")) {
-                    $this->start();
+                if (!$this->docker->isNamedContainerRunning($instance['container'])) {
+                    if ($this->confirm("{$instance['service']} is not running, do you want start?")) {
+                        $this->start();
+                    }
+
+                    return;
                 }
 
-                return;
-            }
-
-            try {
-                $this->docker->stopNamedContainer($container['name']);
-                $this->docker->removeNamedContainer($container['name']);
-            } catch (Exception $e) {
-                Log::warning($e->getMessage());
-            }
-        });
+                try {
+                    $this->docker->stopNamedContainer($instance['container']);
+                    $this->docker->removeNamedContainer($instance['container']);
+                } catch (Exception $e) {
+                    Log::warning($e->getMessage());
+                }
+            });
     }
 
     /**
-     * Restart docker containers
+     * Restart docker container
      */
     public function restart()
     {
@@ -156,30 +142,43 @@ class Containers
     }
 
     /**
-     * Prepare environment
+     * Prepare container to be used
      *
-     * @param string $container
-     * @param array  $attributes
-     *
-     * @return array
+     * @param \luisgros\docker\containers\Container $container
      */
-    public function prepare($container, array $attributes)
+    public function prepare(Container $container)
     {
-        $name = strtolower('laravel-'.$container);
-        $verbose = isset($attributes['verbose']) ? $attributes['verbose'] : false;
-        $instances = isset($attributes['instances']) ? (int)$attributes['instances'] : 1;
-        $containers = [];
+        $this->container = $container;
+        $basename = class_basename($container);
+        $instances = [];
 
-        for ($i = 1; $i <= $instances; $i++) {
-            $containerName = $name.'-'.$i;
-            $containers[] = ['service' => $container, 'name' => $containerName, 'instance' => $i];
-            $envVar = strtoupper($container)."$i=$containerName";
-            putenv($envVar);
+        for ($i = 1; $i <= $container->instances; $i++) {
+            $name = strtolower("laravel-$basename-$i");
+
+            $instances[] = [
+                'service'   => $basename,
+                'container' => $name,
+                'instance'  => $i,
+            ];
+
+            putenv(strtoupper($basename)."$i=$name");
         }
 
-        $this->instances = $containers;
-        $this->verbose = $verbose;
-        $this->attributes = $attributes;
+        $this->instances = $instances;
+    }
+
+    /**
+     * Run docker container
+     */
+    private function runContainer()
+    {
+        $this->info("Starting {$this->instance['service']} #{$this->instance['instance']}", false);
+
+        putenv('CURRENT_INSTANCE='.$this->instance['instance']);
+
+        $this->preCommand();
+        $this->runCommand();
+        $this->postCommand();
     }
 
     /**
@@ -215,17 +214,13 @@ class Containers
      *
      * @return array
      */
-    private function setContainerNetwork()
+    private function setNetwork()
     {
-        $network = isset($this->attributes['network']) ? $this->attributes['network'] : 'bridge';
-
-        $host = $this->docker->getNamedContainerIp($this->container['name'], $network);
-        $port = $this->docker->getNamedContainerPorts($this->container['name']);
-
-        $this->host = $host;
+        $host = $this->docker->getNamedContainerIp($this->instance['container'], $this->container->network);
+        $port = $this->docker->getNamedContainerPorts($this->instance['container']);
 
         $this->network[] = [
-            'container' => ucfirst($this->container['service']).' #'.$this->container['instance'],
+            'container' => ucfirst($this->instance['service']).' #'.$this->instance['instance'],
             'host'      => $host,
             'port'      => implode(", ", $port),
         ];
@@ -236,9 +231,9 @@ class Containers
      */
     private function pullImage()
     {
-        $tag = $this->attributes['repo'].':'.$this->attributes['tag'];
-        if (!$this->docker->imageExists($tag)) {
-            $this->docker->pull($tag);
+        $image = $this->container->repo.':'.$this->container->tag;
+        if (!$this->docker->imageExists($image)) {
+            $this->docker->pull($image);
         }
     }
 
@@ -248,21 +243,21 @@ class Containers
      * @return string
      * @throws \Exception
      */
-    private function getContainerCommand()
+    private function getCommand()
     {
-        $attributes = $this->attributes;
-
-        if (isset($attributes['run-command'])) {
-            $command = $attributes['run-command'];
+        if (is_callable([$this->container, 'runCommand'], false, $runCommand)) {
+            $command = $runCommand();
         } else {
-            if (isset($attributes['run-commands'])) {
-                $command = $attributes['run-commands'][$this->container['instance']];
+            if (is_callable([$this->container, 'runCommands'], false, $runCommands)) {
+                $command = $runCommands()[$this->instance['instance']];
             } else {
-                throw new Exception("Container {$this->container['service']} run command or commands must be set");
+                throw new Exception(
+                    "Container {$this->instance['service']} runCommand or runCommands method must be defined"
+                );
             }
         }
 
-        return '--name '.$this->container['name'].' '.$this->parseEnvVars($command);
+        return '--name '.$this->instance['container'].' '.$this->parseEnvVars($command);
     }
 
     /**
@@ -270,14 +265,8 @@ class Containers
      */
     private function preCommand()
     {
-        if (isset($this->attributes['pre-command'])) {
-            foreach ($this->attributes['pre-command'] as $command) {
-                if (is_callable($command)) {
-                    $command();
-                } else {
-                    $this->docker->docker($this->parseEnvVars($command));
-                }
-            }
+        if (is_callable([$this->container, 'preCommand'], false, $preCommand)) {
+            $preCommand();
         }
     }
 
@@ -286,31 +275,24 @@ class Containers
      */
     private function postCommand()
     {
-        if (isset($this->attributes['post-command'])) {
-            foreach ($this->attributes['post-command'] as $command) {
-                if (is_callable($command)) {
-                    $command();
-                } else {
-                    $this->docker->docker($this->parseEnvVars($command));
-                }
-            }
+        if (is_callable([$this->container, 'postCommand'], false, $postCommand)) {
+            $postCommand();
         }
     }
 
     /**
      * Perform docker run
-     *
-     * @param string $command
      */
-    private function runCommand($command)
+    private function runCommand()
     {
-        $this->docker->run($command, $this->verbose);
+        $this->docker->run($this->getCommand(), $this->container->verbose);
+        $this->setNetwork();
     }
 
     /**
      * @return array
      */
-    public function getNetworkInformation()
+    public function getNetwork()
     {
         return $this->network;
     }

@@ -10,16 +10,16 @@ class Redis extends Container
     /**
      * @var string
      */
-    protected $repo = 'redis';
+    public $repo = 'redis';
     /**
      * @var string
      */
-    protected $tag = 'alpine';
+    public $tag = 'alpine';
 
     /**
      * @return string
      */
-    public function run_command()
+    public function runCommand()
     {
         return '-d --rm -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
         'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]';

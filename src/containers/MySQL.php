@@ -9,16 +9,16 @@ class MySQL extends Container
     /**
      * @var string
      */
-    protected $repo = 'mysql';
+    public $repo = 'mysql';
     /**
      * @var string
      */
-    protected $tag = 'latest';
+    public $tag = 'latest';
 
     /**
      * @return string
      */
-    public function run_command()
+    public function runCommand()
     {
         return '-d --rm -v /mysql:/var/lib/mysql \\'.
         '-e MYSQL_USER=ENV[DB_USERNAME] \\'.

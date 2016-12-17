@@ -9,16 +9,16 @@ class Benstalkd extends Container
     /**
      * @var string
      */
-    protected $repo = 'schickling/beanstalkd';
+    public $repo = 'schickling/beanstalkd';
     /**
      * @var string
      */
-    protected $tag = 'latest';
+    public $tag = 'latest';
 
     /**
      * @return string
      */
-    public function run_command()
+    public function runCommand()
     {
         return '-d --rm -p 11300:11300 schickling/beanstalkd';
     }

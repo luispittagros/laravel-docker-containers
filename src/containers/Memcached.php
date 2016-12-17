@@ -9,16 +9,16 @@ class Memcached extends Container
     /**
      * @var string
      */
-    protected $repo = 'memcached';
+    public $repo = 'memcached';
     /**
      * @var string
      */
-    protected $tag = 'alpine';
+    public $tag = 'alpine';
 
     /**
      * @return string
      */
-    public function run_command()
+    public function runCommand()
     {
         return '-d -p ENV[MEMCACHED_PORT]:ENV[MEMCACHED_PORT] memcached';
     }

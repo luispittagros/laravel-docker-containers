@@ -60,16 +60,16 @@ class ContainersCommand extends Command
         $this->dockerContainers->loadContainers($this->containers);
         $this->dockerContainers->init($command, $container);
 
-        $this->displayNetworkInformation();
+        $this->displayNetwork();
     }
 
     /**
      * Render a console table displaying network information
      * for each docker container running
      */
-    private function displayNetworkInformation()
+    private function displayNetwork()
     {
-        $network = $this->dockerContainers->getNetworkInformation();
+        $network = $this->dockerContainers->getNetwork();
 
         if (empty($network)) {
             return;
