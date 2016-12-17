@@ -65,7 +65,7 @@ class Containers
     /**
      * @param array $containers
      */
-    public function loadContainers(array $containers)
+    public function load(array $containers)
     {
         $this->containers = array_merge($containers, $this->containers);
     }
@@ -168,7 +168,7 @@ class Containers
     public function prepare(Container $container)
     {
         $this->container = $container;
-        $this->container->vars = new Variables();
+        $this->container->vars = new ContainerVariables();
 
         $basename = class_basename($container);
         $instances = [];
@@ -185,6 +185,7 @@ class Containers
             putenv(strtoupper($basename)."$i=$name");
         }
 
+        $this->container->vars->instances = $instances;
         $this->instances = $instances;
     }
 
@@ -194,6 +195,9 @@ class Containers
     private function runContainer()
     {
         $this->artisan->info("Starting {$this->instance['service']} #{$this->instance['instance']}", false);
+
+        $this->container->vars->instance = $this->instance['instance'];
+        $this->container->vars->container = $this->instance['container'];
 
         $this->preCommand();
         $this->runCommand();
@@ -236,12 +240,15 @@ class Containers
     private function setNetwork()
     {
         $host = $this->docker->getNamedContainerIp($this->instance['container'], $this->container->network);
-        $port = $this->docker->getNamedContainerPorts($this->instance['container']);
+        $ports = $this->docker->getNamedContainerPorts($this->instance['container']);
+
+        $this->container->vars->host = $host;
+        $this->container->vars->ports = $ports;
 
         $this->network[] = [
             'container' => ucfirst($this->instance['service']).' #'.$this->instance['instance'],
             'host'      => $host,
-            'port'      => implode(", ", $port),
+            'port'      => implode(", ", $ports),
         ];
     }
 

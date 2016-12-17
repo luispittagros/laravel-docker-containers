@@ -4,16 +4,16 @@
  */
 namespace luisgros\docker;
 
-class Variables
+class ContainerVariables
 {
     /**
      * @var int
      */
-    public $instance;
+    public $container;
     /**
-     * @var array
+     * @var int
      */
-    public $instances = [];
+    public $instance;
     /**
      * @var string
      */
@@ -22,4 +22,8 @@ class Variables
      * @var array
      */
     public $ports = [];
+    /**
+     * @var array
+     */
+    public $instances = [];
 }

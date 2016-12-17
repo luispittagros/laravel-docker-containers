@@ -58,7 +58,7 @@ class ContainersCommand extends Command
         $command   = $this->argument('option');
 
         $this->dockerContainers->register($this);
-        $this->dockerContainers->loadContainers($this->containers);
+        $this->dockerContainers->load($this->containers);
         $this->dockerContainers->init($command, $container);
     }
 }

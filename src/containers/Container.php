@@ -29,7 +29,7 @@ abstract class Container
      */
     public $verbose = false;
     /**
-     * @var \luisgros\docker\Variables
+     * @var \luisgros\docker\ContainerVariables
      */
     public $vars;
 
