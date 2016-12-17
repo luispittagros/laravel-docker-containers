@@ -17,11 +17,13 @@ class Redis extends Container
     public $tag = 'alpine';
 
     /**
-     * @return string
+     * @return array
      */
     public function runCommand()
     {
-        return '-d --rm -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
-        'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]';
+        return [
+            '-d --rm -p ENV[REDIS_PORT]:ENV[REDIS_PORT] \\'.
+            'redis redis-server --appendonly yes --requirepass ENV[REDIS_PASSWORD]',
+        ];
     }
 }

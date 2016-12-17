@@ -16,10 +16,12 @@ class Benstalkd extends Container
     public $tag = 'latest';
 
     /**
-     * @return string
+     * @return array
      */
     public function runCommand()
     {
-        return '-d --rm -p 11300:11300 schickling/beanstalkd';
+        return [
+            '-d --rm -p 11300:11300 schickling/beanstalkd',
+        ];
     }
 }

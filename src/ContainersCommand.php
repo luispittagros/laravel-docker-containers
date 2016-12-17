@@ -57,25 +57,8 @@ class ContainersCommand extends Command
         $container = $this->option('name') ? : null;
         $command   = $this->argument('option');
 
+        $this->dockerContainers->register($this);
         $this->dockerContainers->loadContainers($this->containers);
         $this->dockerContainers->init($command, $container);
-
-        $this->displayNetwork();
-    }
-
-    /**
-     * Render a console table displaying network information
-     * for each docker container running
-     */
-    private function displayNetwork()
-    {
-        $network = $this->dockerContainers->getNetwork();
-
-        if (empty($network)) {
-            return;
-        }
-
-        $headers = ['Container', 'Host', 'Port'];
-        $this->table($headers, $network);
     }
 }

@@ -5,8 +5,10 @@
 namespace luisgros\docker;
 
 use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use luisgros\docker\containers\Container;
+use Symfony\Component\Console\Exception\CommandNotFoundException;
 
 /**
  * Class Containers
@@ -16,13 +18,17 @@ use luisgros\docker\containers\Container;
 class Containers
 {
     /**
-     * @var array
+     * @var \Illuminate\Console\Command
      */
-    protected $containers = [];
+    protected $artisan;
+    /**
+     * @var \luisgros\docker\containers\Container
+     */
+    protected $container;
     /**
      * @var array
      */
-    protected $container;
+    protected $containers = [];
     /**
      * @var Docker
      */
@@ -34,11 +40,11 @@ class Containers
     /**
      * @var array
      */
-    private $instances = [];
+    protected $instance = [];
     /**
      * @var array
      */
-    private $instance = [];
+    protected $instances = [];
 
     /**
      * @param Docker $docker
@@ -49,12 +55,29 @@ class Containers
     }
 
     /**
+     * @param \Illuminate\Console\Command $command
+     */
+    public function register(Command $command)
+    {
+        $this->artisan = $command;
+    }
+
+    /**
+     * @param array $containers
+     */
+    public function loadContainers(array $containers)
+    {
+        $this->containers = array_merge($containers, $this->containers);
+    }
+
+    /**
      * @param string      $command
      * @param string|null $name
+     * @throws Exception
      */
     public function init($command, $name = null)
     {
-        collect($this->containers)
+        $containers = collect($this->containers)
             ->reject(function ($current) use ($name) {
                 if ($name === null) {
                     return false;
@@ -65,28 +88,24 @@ class Containers
                 }
 
                 return true;
-            })->each(function ($container) use ($command) {
-
-                $this->prepare(new $container());
-
-                switch ($command) {
-                    case 'start':
-                        $this->start();
-                        break;
-                    case 'stop':
-                        return $this->stop();
-                        break;
-                    case 'restart':
-                        $this->restart();
-                        break;
-                    default:
-                        throw new Exception('Container init method command not found or not defined');
+            })
+            ->each(function ($container) use ($command) {
+                if (!in_array($command, ['start', 'stop', 'restart'])) {
+                    throw new CommandNotFoundException(sprintf("Command '%s' not found", $command));
                 }
+                $this->prepare(new $container());
+                $this->{$command}();
             });
+
+        if ($containers->isEmpty()) {
+            throw new Exception(sprintf("Container '%s' not found", ucwords($name)));
+        }
+
+        $this->displayNetwork();
     }
 
     /**
-     * Start docker container
+     * Start containers
      */
     public function start()
     {
@@ -96,44 +115,44 @@ class Containers
             $this->instance = $instance;
 
             if ($this->docker->isNamedContainerRunning($instance['container'])) {
-                if ($this->confirm("{$instance['container']} is already running, do you want restart?")) {
+                if ($this->artisan->confirm("{$instance['container']} is already running, do you want restart?")) {
                     $this->restart();
                 }
                 continue;
             }
-
             $this->runContainer();
         }
     }
 
     /**
-     * Stop docker container
+     * Stop containers
      */
     public function stop()
     {
-        collect($this->instances)
-            ->each(function ($instance) {
-                $this->info("Stopping {$instance['service']} #{$instance['instance']}");
+        foreach ($this->instances as $instance) {
+            $this->artisan->info("Stopping {$instance['service']} #{$instance['instance']}");
 
-                if (!$this->docker->isNamedContainerRunning($instance['container'])) {
-                    if ($this->confirm("{$instance['service']} is not running, do you want start?")) {
-                        $this->start();
-                    }
-
-                    return;
+            if (!$this->docker->isNamedContainerRunning($instance['container'])) {
+                if ($this->artisan->confirm("{$instance['service']} is not running, do you want start?")) {
+                    $this->start();
                 }
 
-                try {
-                    $this->docker->stopNamedContainer($instance['container']);
-                    $this->docker->removeNamedContainer($instance['container']);
-                } catch (Exception $e) {
-                    Log::warning($e->getMessage());
-                }
-            });
+                return;
+            }
+
+            try {
+                $this->docker->stopNamedContainer($instance['container']);
+                $this->docker->removeNamedContainer($instance['container']);
+            } catch (Exception $e) {
+                Log::warning($e->getMessage());
+            }
+        }
+
+        $this->network = [];
     }
 
     /**
-     * Restart docker container
+     * Restart containers
      */
     public function restart()
     {
@@ -142,13 +161,15 @@ class Containers
     }
 
     /**
-     * Prepare container to be used
+     * Prepare container
      *
      * @param \luisgros\docker\containers\Container $container
      */
     public function prepare(Container $container)
     {
         $this->container = $container;
+        $this->container->vars = new Variables();
+
         $basename = class_basename($container);
         $instances = [];
 
@@ -168,13 +189,11 @@ class Containers
     }
 
     /**
-     * Run docker container
+     * Run container
      */
     private function runContainer()
     {
-        $this->info("Starting {$this->instance['service']} #{$this->instance['instance']}", false);
-
-        putenv('CURRENT_INSTANCE='.$this->instance['instance']);
+        $this->artisan->info("Starting {$this->instance['service']} #{$this->instance['instance']}", false);
 
         $this->preCommand();
         $this->runCommand();
@@ -245,17 +264,7 @@ class Containers
      */
     private function getCommand()
     {
-        if (is_callable([$this->container, 'runCommand'], false, $runCommand)) {
-            $command = $runCommand();
-        } else {
-            if (is_callable([$this->container, 'runCommands'], false, $runCommands)) {
-                $command = $runCommands()[$this->instance['instance']];
-            } else {
-                throw new Exception(
-                    "Container {$this->instance['service']} runCommand or runCommands method must be defined"
-                );
-            }
-        }
+        $command = $this->container->runCommand()[$this->instance['instance'] - 1];
 
         return '--name '.$this->instance['container'].' '.$this->parseEnvVars($command);
     }
@@ -265,9 +274,7 @@ class Containers
      */
     private function preCommand()
     {
-        if (is_callable([$this->container, 'preCommand'], false, $preCommand)) {
-            $preCommand();
-        }
+        $this->container->preCommand();
     }
 
     /**
@@ -275,9 +282,7 @@ class Containers
      */
     private function postCommand()
     {
-        if (is_callable([$this->container, 'postCommand'], false, $postCommand)) {
-            $postCommand();
-        }
+        $this->container->postCommand();
     }
 
     /**
@@ -290,18 +295,16 @@ class Containers
     }
 
     /**
-     * @return array
+     * Render a console table displaying network information
+     * for each docker container running
      */
-    public function getNetwork()
+    private function displayNetwork()
     {
-        return $this->network;
-    }
+        if (empty($this->network)) {
+            return;
+        }
 
-    /**
-     * @param array $containers
-     */
-    public function loadContainers(array $containers)
-    {
-        $this->containers = array_merge($containers, $this->containers);
+        $headers = ['Container', 'Host', 'Port'];
+        $this->artisan->table($headers, $this->network);
     }
 }

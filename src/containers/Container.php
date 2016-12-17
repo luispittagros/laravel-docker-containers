@@ -4,6 +4,8 @@
  */
 namespace luisgros\docker\containers;
 
+use Exception;
+
 abstract class Container
 {
     /**
@@ -26,20 +28,15 @@ abstract class Container
      * @var boolean
      */
     public $verbose = false;
-
     /**
-     * @return string
+     * @var \luisgros\docker\Variables
      */
-    public function runCommand()
-    {
-    }
+    public $vars;
 
     /**
      * @return array
      */
-    public function runCommands()
-    {
-    }
+    abstract public function runCommand();
 
     /**
      * @return array

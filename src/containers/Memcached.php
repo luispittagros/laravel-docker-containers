@@ -16,10 +16,12 @@ class Memcached extends Container
     public $tag = 'alpine';
 
     /**
-     * @return string
+     * @return array
      */
     public function runCommand()
     {
-        return '-d -p ENV[MEMCACHED_PORT]:ENV[MEMCACHED_PORT] memcached';
+        return [
+            '-d -p ENV[MEMCACHED_PORT]:ENV[MEMCACHED_PORT] memcached',
+        ];
     }
 }
