@@ -1,0 +1,8 @@
+title: Laravel Docker Containers
+description: Automate your docker containers inside Laravel
+google_analytics: 
+show_downloads: true
+theme: jekyll-theme-cayman
+
+gems:
+  - jekyll-mentions
