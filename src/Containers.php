@@ -8,7 +8,6 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use luisgros\docker\containers\Container;
-use Symfony\Component\Console\Exception\CommandNotFoundException;
 
 /**
  * Class Containers
@@ -71,34 +70,34 @@ class Containers
     }
 
     /**
-     * @param string      $command
-     * @param string|null $name
-     * @throws Exception
+     * @param string     $command
+     * @param array|null $containers
+     *
+     * @throws \Exception
      */
-    public function init($command, $name = null)
+    public function init($command, $containers = null)
     {
         $containers = collect($this->containers)
-            ->reject(function ($current) use ($name) {
-                if ($name === null) {
+            ->reject(function ($current) use ($containers) {
+                if ($containers === null) {
                     return false;
                 }
 
-                if (strtolower(class_basename($current)) === strtolower($name)) {
-                    return false;
+                foreach ($containers as $container) {
+                    if (strtolower(class_basename($current)) === strtolower($container)) {
+                        return false;
+                    }
                 }
 
                 return true;
             })
             ->each(function ($container) use ($command) {
-                if (!in_array($command, ['start', 'stop', 'restart'])) {
-                    throw new CommandNotFoundException(sprintf("Command '%s' not found", $command));
-                }
                 $this->prepare(new $container());
                 $this->{$command}();
             });
 
         if ($containers->isEmpty()) {
-            throw new Exception(sprintf("Container '%s' not found", ucwords($name)));
+            throw new Exception(sprintf("Container(s) '%s' not found", ucwords(implode(' ', $containers))));
         }
 
         $this->displayNetwork();
@@ -112,14 +111,15 @@ class Containers
         $this->pullImage();
 
         foreach ($this->instances as $instance) {
-            $this->instance = $instance;
-
             if ($this->docker->isNamedContainerRunning($instance['container'])) {
                 if ($this->artisan->confirm("{$instance['container']} is already running, do you want restart?")) {
                     $this->restart();
                 }
                 continue;
             }
+
+            $this->instance = $instance;
+
             $this->runContainer();
         }
     }
@@ -147,8 +147,6 @@ class Containers
                 Log::warning($e->getMessage());
             }
         }
-
-        $this->network = [];
     }
 
     /**
@@ -157,6 +155,7 @@ class Containers
     public function restart()
     {
         $this->stop();
+        sleep(1);
         $this->start();
     }
 
@@ -168,6 +167,7 @@ class Containers
     public function prepare(Container $container)
     {
         $this->container = $container;
+        $this->container->setDockerClient($this->docker);
         $this->container->vars = new ContainerVariables();
 
         $basename = class_basename($container);
@@ -182,7 +182,7 @@ class Containers
                 'instance'  => $i,
             ];
 
-            putenv(strtoupper($basename)."$i=$name");
+            putenv("CONTAINER_I$i=$name");
         }
 
         $this->container->vars->instances = $instances;
@@ -196,7 +196,7 @@ class Containers
     {
         $this->artisan->info("Starting {$this->instance['service']} #{$this->instance['instance']}", false);
 
-        $this->container->vars->instance = $this->instance['instance'];
+        putenv("INSTANCE_ID={$this->instance['instance']}");
         $this->container->vars->container = $this->instance['container'];
 
         $this->preCommand();
@@ -221,7 +221,7 @@ class Containers
                 $value = getenv($variable);
 
                 if ($value === false) {
-                    $this->error(sprintf("Environment variable '%s' is not set", $variable));
+                    $this->artisan->error(sprintf("Environment variable '%s' is not set", $variable));
                     continue;
                 }
 
@@ -242,6 +242,10 @@ class Containers
         $host = $this->docker->getNamedContainerIp($this->instance['container'], $this->container->network);
         $ports = $this->docker->getNamedContainerPorts($this->instance['container']);
 
+        if (($host == '') || empty($ports)) {
+            return;
+        }
+
         $this->container->vars->host = $host;
         $this->container->vars->ports = $ports;
 
@@ -258,9 +262,9 @@ class Containers
     private function pullImage()
     {
         $image = $this->container->repo.':'.$this->container->tag;
-        if (!$this->docker->imageExists($image)) {
-            $this->docker->pull($image);
-        }
+        //if (!$this->docker->imageExists($image)) {
+        $this->docker->pull($image);
+        //}
     }
 
     /**
@@ -271,7 +275,9 @@ class Containers
      */
     private function getCommand()
     {
-        $command = $this->container->runCommand()[$this->instance['instance'] - 1];
+        var_dump($this->instance['instance']-1);
+
+        $command = $this->container->runCommand()[($this->instance['instance']-1)];
 
         return '--name '.$this->instance['container'].' '.$this->parseEnvVars($command);
     }
