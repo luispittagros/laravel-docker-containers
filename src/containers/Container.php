@@ -32,6 +32,10 @@ abstract class Container
      * @var \luisgros\docker\ContainerVariables
      */
     public $vars;
+    /**
+     * @var \luisgros\docker\Docker
+     */
+    public $docker;
 
     /**
      * @return array
@@ -50,6 +54,20 @@ abstract class Container
      */
     public function preCommand()
     {
+    }
+
+    public function setDockerClient($docker)
+    {
+        $this->docker = $docker;
+    }
+
+    /**
+     * @param      $command
+     * @param bool $verbose
+     */
+    protected function docker($command, $verbose = false)
+    {
+        $this->docker->docker($command, $verbose);
     }
 
     /**

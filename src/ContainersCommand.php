@@ -19,7 +19,7 @@ class ContainersCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'containers {option} {--name=}';
+    protected $signature = 'containers {option} {container?*}';
     /**
      * The console command description.
      *
@@ -36,7 +36,14 @@ class ContainersCommand extends Command
      * @var \luisgros\docker\Containers
      */
     protected $dockerContainers;
-
+    /**
+     * @var array
+     */
+    private $commands =  [
+        'start',
+        'stop',
+        'restart'
+    ];
     /**
      * ContainersCommand constructor.
      *
@@ -54,8 +61,12 @@ class ContainersCommand extends Command
      */
     public function handle()
     {
-        $container = $this->option('name') ? : null;
+        $container = $this->argument('container') ? : null;
         $command   = $this->argument('option');
+
+        if (!in_array($command, $this->commands)) {
+            throw new CommandNotFoundException(sprintf("Command '%s' not found", $command));
+        }
 
         $this->dockerContainers->register($this);
         $this->dockerContainers->load($this->containers);
