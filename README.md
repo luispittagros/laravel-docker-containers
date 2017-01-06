@@ -16,25 +16,45 @@ PHP >= 5.6.4
 composer require idrislab/laravel-docker-containers
 ```
 
-Register DockerContainers with Artisan in *app/Console/Kernel.php*
-
-```php
-protected $commands = [
-    DockerContainers::class,
-  ];
-```
-
-Set the following environment variables (inside your .env file)
+Set the following environment variable(inside your .env file)
 
 ```sh
 DOCKER_SOCKET=unix:///var/run/docker.sock
-DOCKER_CONTAINERS=mysql,redis
 ```
 
+Create a new Artisan command
+```sh
+php artisan make:command Containers
+```
+Register the new command with Artisan in *app/Console/Kernel.php* 
+
+```php
+protected $commands = [
+       Commands\Containers::class,
+  ];
+```
+Update your *Containers* command to register containers shipped by default
+```php
+<?php
+
+namespace App\Console\Commands;
+
+use luisgros\docker\containers\MySQL;
+use luisgros\docker\containers\Redis;
+use luisgros\docker\ContainersCommand;
+
+class Containers extends ContainersCommand
+{
+    protected $containers = [
+        MySQL::class,
+        Redis::class,
+    ];
+}
+```
 ## Usage
 
 ```
-php artisan containers <start|stop|restart> [--name=]
+php artisan containers <start|stop|restart> [container(s)]
 ```
 
 ### Examples
@@ -42,85 +62,97 @@ Starting all containers
 ```sh
 php artisan containers start
 ```
-
-Stopping only one container
+Stopping and starting multiple containers
 ```sh
-php artisan containers stop --name=mysql
+php artisan containers start mysql redis
 ```
-
-## Adding Containers
-Create a new Artisan command
+Stopping one container 
 ```sh
-php artisan make:command Containers
+php artisan containers stop mysql
 ```
 
-Register the new command with Artisan in *app/Console/Kernel.php* and remove *DockerContainers::class* if registered
-```php
-protected $commands = [
-       Commands\Containers::class,
-  ];
-```
+### Adding custom containers 
 
-Update your command to look like
-```php
+Create a directory inside *app/* named *Containers* and create a file named *MySQLGroupReplication.php*
+with the following:
+
+``` php
 <?php
-namespace App\Console\Commands;
+namespace App\Containers;
 
-use luisgros\DockerContainers;
+use luisgros\docker\containers\Container;
 
-/**
- * Class  Containers
- *
- * @package App\Console\Commands
- */
-class Containers extends DockerContainers
+class MySQLGroupReplication extends Container
 {
     /**
-     * Execute the console command.
-     *
-     * @return mixed
+     * @var string
      */
-    public function handle()
-    {
+    public $repo = 'mysql/mysql-gr';
+    /**
+     * @var string
+     */
+    public $tag = 'latest';
+    /**
+     * @var string
+     */
+    public $network = 'group1';
+    /**
+     * @var string
+     */
+    public $instances = 3;
 
+    /**
+     * @return array
+     */
+    public function runCommand()
+    {
+        return [
+                '-d --rm --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[CONTAINER_I2]:6606,ENV[CONTAINER_I3]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_ID]',
+
+                '-d --rm --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[CONTAINER_I1]:6606,ENV[CONTAINER_I3]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_ID]',
+
+                '-d --rm --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
+                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
+                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[CONTAINER_I1]:6606,ENV[CONTAINER_I2]:6606\' \\'.
+                '--server-id=ENV[INSTANCE_ID]',
+        ];
+    }
+
+    public function preCommand()
+    {
+        $this->docker('network create group1 &>/dev/null');
     }
 }
 ```
 
-Add your container(s) inside method *handle()*, in this case we're adding a [MySQL Group Replication Container](https://hub.docker.com/r/mysql/mysql-gr/)
+Update your *app/Console/Commands/Containers.php* command to register the new container 
 ```php
-$containers = [
-    'MySQLGr' => [
-        'repo'      => 'mysql/mysql-gr',
-        'tag'       => 'latest',
-        'instances' => 3,
-        'commands'   => [
-            1 =>
-                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR2]:6606,ENV[MYSQLGR3]:6606\' \\'.
-                '--server-id=ENV[INSTANCE_NAME]',
-            2 =>
-                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR3]:6606\' \\'.
-                '--server-id=ENV[INSTANCE_NAME]',
-            3 =>
-                '-d --net=group1 -e MYSQL_ROOT_PASSWORD=ENV[DB_PASSWORD] \\'.
-                '-e MYSQL_REPLICATION_USER=ENV[DB_PASSWORD] -e MYSQL_REPLICATION_PASSWORD=ENV[DB_PASSWORD] \\'.
-                'mysql/mysql-gr --group_replication_group_seeds=\'ENV[MYSQLGR1]:6606,ENV[MYSQLGR2]:6606\' \\'.
-                '--server-id=ENV[INSTANCE_NAME]',
-        ],
-        'network' => 'group1',
-        'docker' => [
-            'pre' => [
-                'network create group1 &>/dev/null',
-            ]
-        ]
-    ],
-];
+<?php
 
-$this->addContainers($containers);
+namespace App\Console\Commands;
 
-parent::handle();
+use App\Containers\MySQLGroupReplication;
+use luisgros\docker\containers\MySQL;
+use luisgros\docker\containers\Redis;
+use luisgros\docker\ContainersCommand;
+
+class Containers extends ContainersCommand
+{
+    protected $containers = [
+        MySQL::class,
+        Redis::class,
+        MySQLGroupReplication::class,
+    ];
+}
+```
+
+Start your container
+```sh
+php artisan containers start mysqlgroupreplication
 ```
