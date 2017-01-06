@@ -275,8 +275,6 @@ class Containers
      */
     private function getCommand()
     {
-        var_dump($this->instance['instance']-1);
-
         $command = $this->container->runCommand()[($this->instance['instance']-1)];
 
         return '--name '.$this->instance['container'].' '.$this->parseEnvVars($command);
